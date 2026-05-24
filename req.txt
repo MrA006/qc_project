@@ -1,0 +1,20 @@
+Dear all,
+Your project is divided into two parts:
+Implementation of the base paper along with your proposed methodology, followed by a comparison of results.
+Writing a paper in IEEE format.
+I will evaluate the first part on 12th May 2026, according to the schedule provided in the attached sheet.
+For the second part (the paper and GitHub submission), you are required to update and submit it by 31st May 2026.
+
+Submission Requirements:
+Proposed methodology with Implementation – 3 wtg
+Finding and Results – 2 wtg
+Paper (uploaded on GitHub as well) – 4 wtg
+GitHub Repository with a complete and professional README.md file – 1 wtg
+Your paper must be in IEEE format and must include these headings. It should be at least 4 to 6 pages long. I will check the plagiarism and AI reports using Turnitin. A similarity score of up to 20% is allowed. If it exceeds 20%, your marks will be deducted.
+Abstract
+Introduction + Literature Review
+Methodology
+Results
+Conclusion
+References
+Best of Luck!
