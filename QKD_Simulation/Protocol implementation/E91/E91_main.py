@@ -27,7 +27,7 @@ class BellPairProgram(QuantumProgram):
         self.apply(INSTR_CNOT, [0, 1])
         yield self.run()
 
-def run_e91():
+def run_e91(distance_km=10.0):
     ns.sim_reset()
     NUM_PAIRS = 1000
     perf = PerformanceTracker(num_pairs=NUM_PAIRS)
@@ -48,14 +48,14 @@ def run_e91():
             PhysicalInstruction(INSTR_MEASURE_X, duration=3700)
         ])
 
-    qchannel_alice = QuantumChannel("qchannel_alice", length=10,
+    qchannel_alice = QuantumChannel("qchannel_alice", length=distance_km,
         models={
             "delay_model": FibreDelayModel(c=2e5),
             "fibre_loss": FibreLossModel(p_loss_init=0.0, p_loss_length=0.2),
             "depolar_model": DepolarNoiseModel(depolar_rate=0.01)
         })
 
-    qchannel_bob = QuantumChannel("qchannel_bob", length=10,
+    qchannel_bob = QuantumChannel("qchannel_bob", length=distance_km,
         models={
             "delay_model": FibreDelayModel(c=2e5),
             "fibre_loss": FibreLossModel(p_loss_init=0.0, p_loss_length=0.2),

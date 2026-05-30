@@ -30,4 +30,4 @@ class AliceProtocol(NodeProtocol):
             self.node.ports["qout"].tx_output(q)
             self.perf.record_epr_sent()
             self.key += str(bit)
-            yield self.await_timer(1e-6)
+            yield self.await_timer(200_000)  # 200 µs — one qubit per round, covers up to 50 km delay

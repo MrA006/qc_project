@@ -15,7 +15,7 @@ Usage (inside the QKD_Simulation venv):
   python findings_results.py
 """
 
-import sys, os, io, re, warnings, math
+import sys, os, io, re, warnings, math, importlib
 import contextlib
 import numpy as np
 import matplotlib
@@ -45,13 +45,24 @@ matplotlib.rcParams.update({
 
 # ── Path setup ─────────────────────────────────────────────────────────────────
 SCRIPT_DIR = os.path.dirname(os.path.abspath(__file__))
-BASIC_DIR  = os.path.join(SCRIPT_DIR, "Basic Protocol Set")
-OUT_DIR    = os.path.join(SCRIPT_DIR, "Advanced Protocol Set", "plots", "findings")
-sys.path.insert(0, BASIC_DIR)
+PROTO_DIR  = os.path.join(SCRIPT_DIR, "Protocol implementation")
+OUT_DIR    = os.path.join(PROTO_DIR, "plots", "findings")
 
-from bb84 import BB84Simulation
-from e91  import E91Simulation
-from mdi  import MDIQKDSimulation
+def _load_run_fn(protocol_dir, module_name, fn_name):
+    """Import a protocol run function, clearing cached modules to avoid performance.py conflicts."""
+    for key in list(sys.modules.keys()):
+        if key in ("performance", module_name):
+            del sys.modules[key]
+    sys.path.insert(0, protocol_dir)
+    try:
+        mod = importlib.import_module(module_name)
+        return getattr(mod, fn_name)
+    finally:
+        sys.path.pop(0)
+
+run_bb84 = _load_run_fn(os.path.join(PROTO_DIR, "BB84"),    "BB84_main", "run_bb84")
+run_e91  = _load_run_fn(os.path.join(PROTO_DIR, "E91"),     "E91_main",  "run_e91")
+run_mdi  = _load_run_fn(os.path.join(PROTO_DIR, "MDI-QKD"), "main",      "run_mdi")
 
 os.makedirs(OUT_DIR, exist_ok=True)
 
@@ -73,12 +84,12 @@ METRICS = [
 UNITS = {
     "Raw Key Rate":           "bits",
     "QBER":                   "%",
-    "Latency":                "ms",
+    "Latency":                "s",
     "Channel Loss Rate":      "%",
     "Throughput":             "bits/s",
     "Communication Overhead": "messages",
-    "Synchronization Time":   "ms",
-    "Computation Time/Round": "ns",
+    "Synchronization Time":   "s",
+    "Computation Time/Round": "s",
 }
 SHORT = {
     "Raw Key Rate":           "Raw Key\nRate",
@@ -104,12 +115,11 @@ PATTERNS = {
 
 # ── Simulation helpers ─────────────────────────────────────────────────────────
 
-def _run_silent(cls, **kwargs) -> dict:
-    """Run a simulation silently; parse printed metrics."""
+def _run_silent(run_fn, distance_km: float = 10.0) -> dict:
+    """Run a protocol function silently; parse printed metrics."""
     buf = io.StringIO()
     with contextlib.redirect_stdout(buf):
-        sim = cls(**kwargs)
-        sim.run_simulation()
+        run_fn(distance_km=distance_km)
     out = buf.getvalue()
     res = {}
     for key, pat in PATTERNS.items():
@@ -118,13 +128,7 @@ def _run_silent(cls, **kwargs) -> dict:
     return res
 
 
-def _kwargs(name, distance_km, n_bits=1000):
-    if name == "E91":
-        return dict(distance_km=distance_km, initial_pairs=n_bits)
-    return dict(distance_km=distance_km, initial_bits=n_bits)
-
-
-CLS_MAP = {"BB84": BB84Simulation, "E91": E91Simulation, "MDI-QKD": MDIQKDSimulation}
+FN_MAP = {"BB84": run_bb84, "E91": run_e91, "MDI-QKD": run_mdi}
 
 
 def run_batch(n_runs: int = 30, distance_km: float = 10.0) -> dict:
@@ -134,11 +138,10 @@ def run_batch(n_runs: int = 30, distance_km: float = 10.0) -> dict:
     """
     data = {p: {m: [] for m in METRICS} for p in PROTOCOLS}
     for name in PROTOCOLS:
-        cls = CLS_MAP[name]
-        kw  = _kwargs(name, distance_km)
+        fn = FN_MAP[name]
         print(f"  [{name:8s}]", end="", flush=True)
         for i in range(n_runs):
-            res = _run_silent(cls, **kw)
+            res = _run_silent(fn, distance_km=distance_km)
             for m in METRICS:
                 data[name][m].append(res[m])
             if (i + 1) % 5 == 0:
@@ -156,11 +159,10 @@ def run_distance_sweep(distances: list, n_runs: int = 8) -> dict:
     for d in distances:
         print(f"  {d:4.0f} km ", end="", flush=True)
         for name in PROTOCOLS:
-            cls = CLS_MAP[name]
-            kw  = _kwargs(name, d)
+            fn = FN_MAP[name]
             vals = {m: [] for m in METRICS}
             for _ in range(n_runs):
-                res = _run_silent(cls, **kw)
+                res = _run_silent(fn, distance_km=d)
                 for m in METRICS:
                     vals[m].append(res[m])
             for m in METRICS:

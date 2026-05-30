@@ -70,7 +70,7 @@ class BobProtocol(NodeProtocol):
 def random_bits(n):
     return [random.randint(0, 1) for _ in range(n)]
 
-def run_bb84():
+def run_bb84(distance_km=10.0):
     ns.sim_reset()
     perf = PerformanceTracker(num_pairs=NUM_BITS)
     perf.start_simulation()
@@ -83,7 +83,7 @@ def run_bb84():
     procB = QuantumProcessor("procB", num_positions=NUM_BITS,
         phys_instructions=[PhysicalInstruction(INSTR_MEASURE, duration=3700)])
 
-    qchannel = QuantumChannel("qchannel", length=10,
+    qchannel = QuantumChannel("qchannel", length=distance_km,
         models={
             "delay_model": FibreDelayModel(c=2e5),
             "fibre_loss": FibreLossModel(p_loss_init=0.0, p_loss_length=0.2),

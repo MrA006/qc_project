@@ -24,10 +24,13 @@ class CharlieProtocol(NodeProtocol):
         self.num_bits = num_bits
         self.perf = perf
         self.success_indices = []
+        self.bsm_outcomes = []   # list of (m0_val, m1_val) per successful BSM
 
     def run(self):
         count = 0
         while count < self.num_bits:
+            # Alice's qubit arrives first; Bob's qubit arrives ~100 µs later (staggered send).
+            # NetSquid only delivers to an active await_port_input, so we wait sequentially.
             yield self.await_port_input(self.node.ports["qin_a"])
             msg_a = self.node.ports["qin_a"].rx_input()
 
@@ -35,6 +38,7 @@ class CharlieProtocol(NodeProtocol):
             msg_b = self.node.ports["qin_b"].rx_input()
 
             if not msg_a or not msg_b:
+                count += 1
                 continue
 
             q_a = msg_a.items[0]
@@ -49,12 +53,12 @@ class CharlieProtocol(NodeProtocol):
             m0 = bsm.output["m0"]
             m1 = bsm.output["m1"]
 
-            # Only count as "received" if BSM succeeded (both measurements valid)
             if m0 is not None and m1 is not None:
                 self.perf.record_qubit_received("alice")
                 self.perf.record_qubit_received("bob")
-                self.perf.record_classical_message()  # simulate BSM broadcast
+                self.perf.record_classical_message()
                 self.success_indices.append(count)
+                self.bsm_outcomes.append((m0[0], m1[0]))
 
             discard(q_a)
             discard(q_b)

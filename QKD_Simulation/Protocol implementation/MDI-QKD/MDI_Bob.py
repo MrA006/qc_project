@@ -15,6 +15,9 @@ class BobProtocol(NodeProtocol):
         self.bases = []
 
     def run(self):
+        # Stagger Bob by half the round timer so Alice's and Bob's qubits arrive at
+        # Charlie at different times — NetSquid only delivers to an active await_port_input.
+        yield self.await_timer(100_000)
         for _ in range(self.num_bits):
             bit = random.randint(0, 1)
             basis = random.randint(0, 1)  # 0: Z, 1: X
@@ -30,4 +33,4 @@ class BobProtocol(NodeProtocol):
             self.node.ports["qout"].tx_output(q)
             self.perf.record_epr_sent()
             self.key += str(bit)
-            yield self.await_timer(1e-6)
+            yield self.await_timer(200_000)  # 200 µs per round, covers up to 50 km delay
